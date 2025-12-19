@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>미로 게임</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 600px;
+            width: 100%;
+        }
+        h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 2em;
+        }
+        .level-select {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .level-btn {
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: white;
+        }
+        .level-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+        .level-1 { background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%); }
+        .level-2 { background: linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%); }
+        .level-3 { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+        .level-4 { background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%); }
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+        .timer { color: #667eea; }
+        .moves { color: #764ba2; }
+        #gameCanvas {
+            border: 3px solid #667eea;
+            border-radius: 10px;
+            display: block;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .controls {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .control-btn {
+            padding: 12px 25px;
+            margin: 5px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            transition: all 0.3s;
+        }
+        .control-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .instructions {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            text-align: center;
+            color: #555;
+        }
+        .success {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            text-align: center;
+            display: none;
+            z-index: 1000;
+        }
+        .success h2 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 20px;
+        }
+        .success p {
+            font-size: 1.2em;
+            margin: 10px 0;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 미로 탈출 게임</h1>
+        
+        <div class="level-select" id="levelSelect">
+            <button class="level-btn level-1" onclick="startGame(1)">😊 Level 1<br>초급</button>
+            <button class="level-btn level-2" onclick="startGame(2)">🙂 Level 2<br>중급</button>
+            <button class="level-btn level-3" onclick="startGame(3)">😎 Level 3<br>고급</button>
+            <button class="level-btn level-4" onclick="startGame(4)">🔥 Level 4<br>극한</button>
+        </div>
+
+        <div class="game-info" id="gameInfo" style="display:none;">
+            <div class="timer">⏱️ 시간: <span id="timer">0</span>초</div>
+            <div class="moves">👣 이동: <span id="moves">0</span>회</div>
+        </div>
+
+        <canvas id="gameCanvas" width="500" height="500" style="display:none;"></canvas>
+
+        <div class="controls" id="controls" style="display:none;">
+            <button class="control-btn" onclick="resetGame()">🔄 다시하기</button>
+            <button class="control-btn" onclick="backToMenu()">📋 메뉴로</button>
+        </div>
+
+        <div class="instructions">
+            <strong>🎯 조작법:</strong> 화살표 키(↑↓←→)로 이동<br>
+            <strong>🏆 목표:</strong> 파란 공(시작)에서 초록 깃발(도착)까지!
+        </div>
+    </div>
+
+    <div class="success" id="successMsg">
+        <h2>🎉 성공!</h2>
+        <p>소요 시간: <span id="finalTime"></span>초</p>
+        <p>이동 횟수: <span id="finalMoves"></span>회</p>
+        <button class="control-btn" onclick="nextLevel()">다음 레벨 ➡️</button>
+        <button class="control-btn" onclick="backToMenu()">메뉴로 📋</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let currentLevel = 0;
+        let playerX = 0;
+        let playerY = 0;
+        let cellSize = 0;
+        let maze = [];
+        let moves = 0;
+        let startTime = 0;
+        let timerInterval = null;
+
+        const mazes = {
+            1: { // 초급 - 5x5
+                size: 5,
+                walls: [
+                    [1,1,1,1,1],
+                    [1,0,0,0,1],
+                    [1,0,1,0,1],
+                    [1,0,0,0,1],
+                    [1,1,1,1,1]
+                ],
+                start: {x: 1, y: 1},
+                end: {x: 3, y: 3}
+            },
+            2: { // 중급 - 8x8
+                size: 8,
+                walls: [
+                    [1,1,1,1,1,1,1,1],
+                    [1,0,0,0,1,0,0,1],
+                    [1,0,1,0,1,0,1,1],
+                    [1,0,1,0,0,0,0,1],
+                    [1,0,1,1,1,1,0,1],
+                    [1,0,0,0,0,0,0,1],
+                    [1,1,1,0,1,1,0,1],
+                    [1,1,1,1,1,1,1,1]
+                ],
+                start: {x: 1, y: 1},
+                end: {x: 6, y: 6}
+            },
+            3: { // 고급 - 12x12
+                size: 12,
+                walls: [
+                    [1,1,1,1,1,1,1,1,1,1,1,1],
+                    [1,0,0,0,1,0,0,0,0,0,0,1],
+                    [1,0,1,0,1,0,1,1,1,1,0,1],
+                    [1,0,1,0,0,0,0,0,0,1,0,1],
+                    [1,0,1,1,1,1,1,1,0,1,0,1],
+                    [1,0,0,0,0,0,0,0,0,1,0,1],
+                    [1,1,1,1,1,0,1,1,1,1,0,1],
+                    [1,0,0,0,1,0,0,0,0,0,0,1],
+                    [1,0,1,0,1,1,1,1,1,1,0,1],
+                    [1,0,1,0,0,0,0,0,0,0,0,1],
+                    [1,0,0,0,1,1,1,1,1,1,0,1],
+                    [1,1,1,1,1,1,1,1,1,1,1,1]
+                ],
+                start: {x: 1, y: 1},
+                end: {x: 10, y: 10}
+            },
+            4: { // 극한 - 15x15
+                size: 15,
+                walls: [
+                    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+                    [1,0,0,0,1,0,0,0,0,0,0,0,0,0,1],
+                    [1,0,1,0,1,0,1,1,1,1,1,1,1,0,1],
+                    [1,0,1,0,0,0,0,0,0,0,0,0,1,0,1],
+                    [1,0,1,1,1,1,1,0,1,1,1,0,1,0,1],
+                    [1,0,0,0,0,0,1,0,0,0,1,0,1,0,1],
+                    [1,1,1,1,1,0,1,1,1,0,1,0,1,0,1],
+                    [1,0,0,0,0,0,0,0,1,0,0,0,1,0,1],
+                    [1,0,1,1,1,1,1,0,1,1,1,1,1,0,1],
+                    [1,0,1,0,0,0,0,0,0,0,0,0,0,0,1],
+                    [1,0,1,0,1,1,1,1,1,0,1,1,1,0,1],
+                    [1,0,0,0,1,0,0,0,0,0,1,0,0,0,1],
+                    [1,1,1,0,1,0,1,1,1,1,1,0,1,1,1],
+                    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+                    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+                ],
+                start: {x: 1, y: 1},
+                end: {x: 13, y: 13}
+            }
+        };
+
+        function startGame(level) {
+            currentLevel = level;
+            const mazeData = mazes[level];
+            maze = mazeData.walls;
+            cellSize = 500 / mazeData.size;
+            
+            playerX = mazeData.start.x;
+            playerY = mazeData.start.y;
+            moves = 0;
+            
+            document.getElementById('levelSelect').style.display = 'none';
+            document.getElementById('gameCanvas').style.display = 'block';
+            document.getElementById('gameInfo').style.display = 'flex';
+            document.getElementById('controls').style.display = 'block';
+            
+            startTime = Date.now();
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(updateTimer, 100);
+            
+            document.getElementById('moves').textContent = moves;
+            
+            drawMaze();
+        }
+
+        function drawMaze() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const mazeData = mazes[currentLevel];
+            
+            // 미로 그리기
+            for (let y = 0; y < mazeData.size; y++) {
+                for (let x = 0; x < mazeData.size; x++) {
+                    if (maze[y][x] === 1) {
+                        ctx.fillStyle = '#333';
+                        ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+                    } else {
+                        ctx.fillStyle = '#f0f0f0';
+                        ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+                    }
+                    ctx.strokeStyle = '#ddd';
+                    ctx.strokeRect(x * cellSize, y * cellSize, cellSize, cellSize);
+                }
+            }
+            
+            // 도착점 그리기
+            ctx.fillStyle = '#4CAF50';
+            ctx.fillRect(mazeData.end.x * cellSize + 5, mazeData.end.y * cellSize + 5, cellSize - 10, cellSize - 10);
+            ctx.fillStyle = 'white';
+            ctx.font = `${cellSize/2}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('🏁', mazeData.end.x * cellSize + cellSize/2, mazeData.end.y * cellSize + cellSize/2);
+            
+            // 플레이어 그리기
+            ctx.fillStyle = '#2196F3';
+            ctx.beginPath();
+            ctx.arc(playerX * cellSize + cellSize/2, playerY * cellSize + cellSize/2, cellSize/3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function updateTimer() {
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            document.getElementById('timer').textContent = elapsed;
+        }
+
+        function movePlayer(dx, dy) {
+            const newX = playerX + dx;
+            const newY = playerY + dy;
+            
+            const mazeData = mazes[currentLevel];
+            
+            if (newX >= 0 && newX < mazeData.size && newY >= 0 && newY < mazeData.size && maze[newY][newX] === 0) {
+                playerX = newX;
+                playerY = newY;
+                moves++;
+                document.getElementById('moves').textContent = moves;
+                drawMaze();
+                
+                if (playerX === mazeData.end.x && playerY === mazeData.end.y) {
+                    winGame();
+                }
+            }
+        }
+
+        function winGame() {
+            clearInterval(timerInterval);
+            const finalTime = Math.floor((Date.now() - startTime) / 1000);
+            document.getElementById('finalTime').textContent = finalTime;
+            document.getElementById('finalMoves').textContent = moves;
+            document.getElementById('successMsg').style.display = 'block';
+        }
+
+        function nextLevel() {
+            document.getElementById('successMsg').style.display = 'none';
+            if (currentLevel < 4) {
+                startGame(currentLevel + 1);
+            } else {
+                alert('🎊 모든 레벨을 클리어했습니다! 축하합니다!');
+                backToMenu();
+            }
+        }
+
+        function resetGame() {
+            startGame(currentLevel);
+        }
+
+        function backToMenu() {
+            clearInterval(timerInterval);
+            document.getElementById('successMsg').style.display = 'none';
+            document.getElementById('levelSelect').style.display = 'grid';
+            document.getElementById('gameCanvas').style.display = 'none';
+            document.getElementById('gameInfo').style.display = 'none';
+            document.getElementById('controls').style.display = 'none';
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (document.getElementById('gameCanvas').style.display === 'block') {
+                e.preventDefault();
+                switch(e.key) {
+                    case 'ArrowUp': movePlayer(0, -1); break;
+                    case 'ArrowDown': movePlayer(0, 1); break;
+                    case 'ArrowLeft': movePlayer(-1, 0); break;
+                    case 'ArrowRight': movePlayer(1, 0); break;
+                }
+            }
+        });
+    </script>
+</body>
+</html>
